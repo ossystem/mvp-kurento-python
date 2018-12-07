@@ -1,0 +1,70 @@
+#!/usr/bin/env python
+import cv2
+import logging
+import numpy as np
+import struct
+import sys
+
+
+logging.basicConfig(filename='/tmp/pyecho.log',level=logging.INFO)
+
+HEADER_SIZE = 16
+
+def handle_exception(exc_type, exc_value, exc_traceback):
+    logging.exception('{} -- {}'.format(exc_type, exc_value))
+
+def process_frame(frame):
+    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+    # some detection logic
+    frame = cv2.cvtColor(gray, cv2.COLOR_GRAY2BGRA)
+
+    return frame
+
+
+if __name__ == '__main__':
+    sys.excepthook = handle_exception
+
+    data = b""
+    while True:
+        data += sys.stdin.read(HEADER_SIZE)
+
+        header = data[:HEADER_SIZE]
+        data = data[HEADER_SIZE:]
+
+        width, height, bps, length = struct.unpack('iiii', header)
+        empty_frame = np.zeros((height, width, bps))
+
+        logging.info('got frame header. width is {}, height is {}, bytes per '
+                         'pixel is {}, frame length is {}'
+                         .format(width, height, bps, length))
+
+        while len(data) < length:
+            chunk = sys.stdin.read(HEADER_SIZE)
+            data += chunk
+
+        logging.debug('buffer {}'.format(len(data)))
+        raw_frame = data[:length]
+        logging.debug('frame {}'.format(len(raw_frame)))
+
+        try:
+            data = data[length:]
+            frame = np.frombuffer(raw_frame, dtype=np.uint8).reshape(empty_frame.shape)
+            logging.debug('read np array')
+
+            logging.debug('going to process frame')
+            frame = process_frame(frame)
+            logging.debug('processed frame')
+        except:
+            logging.error('something went wrong while processing frame')
+
+        if frame is not None:
+            out_data = frame.tobytes()
+        else:
+            logging.warning('broken frame. sending out original one')
+            out_data = raw_frame
+
+        try:
+            sys.stdout.write(out_data)
+            sys.stdout.flush()
+        except:
+            logging.error('something went wrong while writing to stdout')
