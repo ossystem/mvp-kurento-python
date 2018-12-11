@@ -117,6 +117,16 @@ function startResponse(message) {
 	webRtcPeer.processAnswer(message.sdpAnswer);
 }
 
+function push() {
+  console.log('Pushing data to encoder');
+  var message = {
+    id : 'control',
+    key: 'ts',
+    value: +(new Date()),
+  }
+  sendMessage(message);
+}
+
 function stop() {
 	console.log('Stopping video call ...');
 	setState(I_CAN_START);
@@ -137,12 +147,16 @@ function setState(nextState) {
 	case I_CAN_START:
 		$('#start').attr('disabled', false);
 		$('#start').attr('onclick', 'start()');
+		$('#push').attr('disabled', true);
+		$('#push').removeAttr('onclick');
 		$('#stop').attr('disabled', true);
 		$('#stop').removeAttr('onclick');
 		break;
 
 	case I_CAN_STOP:
 		$('#start').attr('disabled', true);
+		$('#push').attr('disabled', false);
+		$('#push').attr('onclick', 'push()');
 		$('#stop').attr('disabled', false);
 		$('#stop').attr('onclick', 'stop()');
 		break;
@@ -150,6 +164,8 @@ function setState(nextState) {
 	case I_AM_STARTING:
 		$('#start').attr('disabled', true);
 		$('#start').removeAttr('onclick');
+		$('#push').attr('disabled', true);
+		$('#push').removeAttr('onclick');
 		$('#stop').attr('disabled', true);
 		$('#stop').removeAttr('onclick');
 		break;

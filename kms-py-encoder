@@ -8,19 +8,31 @@ import ssl
 import struct
 import sys
 import time
+import threading
 import websocket
 
 
 logging.basicConfig(filename='/tmp/pyecho.log',level=logging.INFO)
 
 HEADER_SIZE = 16
-
-ws = websocket.WebSocket(sslopt={'cert_reqs': ssl.CERT_NONE})
-ws.connect(os.environ['WS_DATA_ENDPOINT'])
+DATA = {
+    'Label1_val': 1,
+    'Label2_val': 2,
+    'ts': time.time()
+}
 session_id = sys.argv[1]
+ws = None
+
 
 def handle_exception(exc_type, exc_value, exc_traceback):
     logging.exception('{} -- {}'.format(exc_type, exc_value))
+
+def ws_on_message(ws, data):
+    msg = json.loads(data)
+
+    assert msg.get('key'), 'broken control packet. key not specified'
+
+    DATA[msg.get('key')] = msg.get('value')
 
 def process_frame(frame):
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
@@ -30,11 +42,7 @@ def process_frame(frame):
     ws.send(json.dumps({
         'id': 'data',
         'to': session_id,
-        'data': {
-            'Label1_val': 1,
-            'Label2_val': 2,
-            'ts': time.time()
-        }
+        'data': DATA
     }))
 
     return frame
@@ -42,6 +50,26 @@ def process_frame(frame):
 
 if __name__ == '__main__':
     sys.excepthook = handle_exception
+
+    websocket.enableTrace(True)
+    ws = websocket.WebSocketApp(
+        os.environ['WS_DATA_ENDPOINT'],
+        on_message=ws_on_message,
+    )
+    wst = threading.Thread(target=ws.run_forever, kwargs={'sslopt':{'cert_reqs': ssl.CERT_NONE}})
+    wst.daemon = True
+    wst.start()
+
+    ws_conn_timeout = 3
+    while not ws.sock.connected and ws_conn_timeout:
+        time.sleep(1)
+        ws_conn_timeout -= 1
+
+    # tie encoder to streaming user. let user know that encoder alive
+    ws.send(json.dumps({
+        'id': 'encoder',
+        'to': session_id,
+    }))
 
     data = b""
     while True:

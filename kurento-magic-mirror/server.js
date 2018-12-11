@@ -136,8 +136,15 @@ wss.on('connection', function(ws) {
             onIceCandidate(sessionId, message.candidate);
             break;
 
+        case 'control':
+            control(sessionId, message.key, message.value);
+
+        case 'encoder':
+            encoder(ws, message.to);
+            break;
+
         case 'data':
-            onData(ws, message.to, message.data);
+            data(ws, message.to, message.data);
             break;
 
         default:
@@ -312,12 +319,33 @@ function onIceCandidate(sessionId, _candidate) {
     }
 }
 
-function onData(ws, to, data) {
+// re-send control data from steaming user to encoder
+function control(sessionId, key, value) {
+  if (sessions[sessionId]) {
+    if (sessions[sessionId].encoder) {
+      sessions[sessionId].encoder.send(JSON.stringify({
+        'id': 'control',
+        'key': key,
+        'value': value,
+      }));
+    }
+  }
+}
+
+// re-send data from encoder to streaming user
+function data(ws, to, data) {
   if (sessions[to]) {
     sessions[to].ws.send(JSON.stringify({
       'id': 'data',
       'data': data,
     }));
+  }
+}
+
+// tie encoder websocket to streaming user
+function encoder(ws, to) {
+  if (sessions[to]) {
+    sessions[to].encoder = ws;
   }
 }
 
