@@ -105,7 +105,11 @@ wss.on('connection', function(ws) {
 
     ws.on('message', function(_message) {
         var message = JSON.parse(_message);
-        console.log('Connection ' + sessionId + ' received message ', message);
+
+        if (message.id != 'data') {
+          // ignore data messages. there are a LOT of them
+          console.log('Connection ' + sessionId + ' received message ', message);
+        }
 
         switch (message.id) {
         case 'start':
@@ -130,6 +134,10 @@ wss.on('connection', function(ws) {
 
         case 'onIceCandidate':
             onIceCandidate(sessionId, message.candidate);
+            break;
+
+        case 'data':
+            onData(ws, message.to, message.data);
             break;
 
         default:
@@ -180,7 +188,7 @@ function start(sessionId, ws, sdpOffer, callback) {
                 return callback(error);
             }
 
-            createMediaElements(pipeline, ws, function(error, webRtcEndpoint, filter) {
+            createMediaElements(sessionId, pipeline, ws, function(error, webRtcEndpoint, filter) {
                 if (error) {
                     pipeline.release();
                     return callback(error);
@@ -214,6 +222,7 @@ function start(sessionId, ws, sdpOffer, callback) {
                         }
 
                         sessions[sessionId] = {
+                            'ws': ws,
                             'pipeline' : pipeline,
                             'webRtcEndpoint' : webRtcEndpoint
                         }
@@ -231,7 +240,7 @@ function start(sessionId, ws, sdpOffer, callback) {
     });
 }
 
-function createMediaElements(pipeline, ws, callback) {
+function createMediaElements(sessionId, pipeline, ws, callback) {
     pipeline.create('WebRtcEndpoint', function(error, webRtcEndpoint) {
         if (error) {
             return callback(error);
@@ -242,12 +251,18 @@ function createMediaElements(pipeline, ws, callback) {
                 return callback(error);
             }
 
-            filter.setEnabled(1, function(error) {
+            filter.setSessionId(sessionId, function (error) {
                 if (error) {
                     return callback(error);
                 }
 
-                return callback(null, webRtcEndpoint, filter);
+                filter.setEnabled(1, function(error) {
+                    if (error) {
+                        return callback(error);
+                    }
+
+                    return callback(null, webRtcEndpoint, filter);
+                });
             });
         });
     });
@@ -295,6 +310,15 @@ function onIceCandidate(sessionId, _candidate) {
         }
         candidatesQueue[sessionId].push(candidate);
     }
+}
+
+function onData(ws, to, data) {
+  if (sessions[to]) {
+    sessions[to].ws.send(JSON.stringify({
+      'id': 'data',
+      'data': data,
+    }));
+  }
 }
 
 app.use(express.static(path.join(__dirname, 'static')));

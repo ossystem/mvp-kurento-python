@@ -42,6 +42,9 @@ ws.onmessage = function(message) {
 	console.info('Received message: ' + message.data);
 
 	switch (parsedMessage.id) {
+	case 'data':
+		console.log(parsedMessage.data);
+		break;
 	case 'startResponse':
 		startResponse(parsedMessage);
 		break;

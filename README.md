@@ -26,9 +26,11 @@ This project has such parts:
 
 # Test setup
 
+Replace `WS_DATA_ENDPOINT` to your nodejs backend app url
+
 ```
 docker build -t kms-server .
-docker run -d --name kms-server -p 8888:8888 kms-server
+docker run -d --name kms-server -p 8888:8888 -e WS_DATA_ENDPOINT='wss://172.17.0.1:8443/magicmirror' kms-server
 cd kurento-magic-mirror/
 npm install
 npm start
