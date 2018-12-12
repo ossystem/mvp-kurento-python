@@ -18,6 +18,10 @@ HEADER_SIZE = 16
 DATA = {
     'Label1_val': 1,
     'Label2_val': 2,
+    'Label3_val': 'three',
+    'Label4_val': 4,
+    'Label5_val': 5,
+    'Label6_val': 6.0,
     'ts': time.time()
 }
 session_id = sys.argv[1]
@@ -61,7 +65,7 @@ if __name__ == '__main__':
     wst.start()
 
     ws_conn_timeout = 3
-    while not ws.sock.connected and ws_conn_timeout:
+    while ws.sock is None or not ws.sock.connected and ws_conn_timeout:
         time.sleep(1)
         ws_conn_timeout -= 1
 
