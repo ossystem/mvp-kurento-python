@@ -24,21 +24,17 @@ var minimist = require('minimist');
 var ws = require('ws');
 var kurento = require('kurento-client');
 var fs    = require('fs');
-var https = require('https');
+var http = require('http');
 kurento.register('kurento-module-pyencoder');
 
 var argv = minimist(process.argv.slice(2), {
     default: {
-        as_uri: 'https://localhost:8443/',
-        ws_uri: 'ws://localhost:8888/kurento'
+        as_uri: 'https://pyrtc.ossystem.ua',
+        ws_uri: 'ws://kms-server:8888/kurento'
     }
 });
 
-var options =
-{
-  key:  fs.readFileSync('keys/server.key'),
-  cert: fs.readFileSync('keys/server.crt')
-};
+var options = {};
 
 var app = express();
 
@@ -67,8 +63,8 @@ var kurentoClient = null;
  * Server startup
  */
 var asUrl = url.parse(argv.as_uri);
-var port = asUrl.port;
-var server = https.createServer(options, app).listen(port, function() {
+var port = 8080;
+var server = http.createServer(app).listen(port, function() {
     console.log('Kurento Tutorial started');
     console.log('Open ' + url.format(asUrl) + ' with a WebRTC capable browser');
 });

@@ -77,7 +77,10 @@ function start() {
     var options = {
       localVideo: videoInput,
       remoteVideo: videoOutput,
-      onicecandidate : onIceCandidate
+      onicecandidate : onIceCandidate,
+      configuration: {
+        iceServers: [{ urls: "turn:31.201.201.191:3478", username: "username", credential: "password" }]
+      }
     }
 
     webRtcPeer = kurentoUtils.WebRtcPeer.WebRtcPeerSendrecv(options, function(error) {
